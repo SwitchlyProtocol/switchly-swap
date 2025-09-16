@@ -18,6 +18,16 @@ declare global {
 }
 
 function App() {
+  // Debug: Log environment variables on app load
+  useEffect(() => {
+    console.log('🔧 Environment Variables Check:');
+    console.log('VITE_ETHEREUM_RPC_URL:', import.meta.env.VITE_ETHEREUM_RPC_URL);
+    console.log('VITE_SWITCHLY_API_BASE_URL:', import.meta.env.VITE_SWITCHLY_API_BASE_URL);
+    console.log('VITE_SWITCHLY_MIDGARD_BASE_URL:', import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL);
+    console.log('VITE_STELLAR_HORIZON_URL:', import.meta.env.VITE_STELLAR_HORIZON_URL);
+    console.log('VITE_STELLAR_SOROBAN_URL:', import.meta.env.VITE_STELLAR_SOROBAN_URL);
+  }, []);
+
   // Basic state
   const [amount, setAmount] = useState("1.0");
   const [fromToken, setFromToken] = useState("ETH (Ethereum Sepolia)");
