@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Tx } from "../types";
 import { createSwap } from "../services/tx";
+import useInboundAddresses from "./useInboundAddresses";
 
 const apiUrl = import.meta.env.VITE_SWITCHLY_SERVICE_HTTP;
 const websocketUrl = import.meta.env.VITE_SWITCHLY_SERVICE_WS;
 
 function useTransactions() {
   const [transactions, setTransactions] = useState<Tx[]>([]);
+  const { getRouter, getVault, isLoading: addressesLoading } = useInboundAddresses();
 
   useEffect(() => {
     // Function to handle incoming WebSocket messages
@@ -101,8 +103,24 @@ function useTransactions() {
     };
 
     try {
-      // Make API call to create the swap
-      const txResponse = await createSwap(newTransaction);
+      // Don't proceed if addresses are still loading
+      if (addressesLoading) {
+        throw new Error("Network addresses are still loading. Please try again.");
+      }
+
+      // Get dynamic router and vault addresses
+      const routerAddresses = {
+        eth: getRouter('ETH'),
+        xlm: getRouter('XLM'),
+      };
+      
+      const vaultAddresses = {
+        eth: getVault('ETH'),
+        xlm: getVault('XLM'),
+      };
+
+      // Make API call to create the swap with dynamic addresses
+      const txResponse = await createSwap(newTransaction, routerAddresses, vaultAddresses);
       newTransaction.from_tx_hash = txResponse?.from_tx_hash;
 
       // Update transactions state to include the new transaction
