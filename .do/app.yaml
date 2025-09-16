@@ -1,33 +1,47 @@
-# DigitalOcean App Platform Specification
-name: switchly-swap
+# DigitalOcean App Platform Specification matching your current setup
+alerts:
+- rule: DEPLOYMENT_FAILED
+- rule: DOMAIN_FAILED
+features:
+- buildpack-stack=ubuntu-22
+ingress:
+  rules:
+  - component:
+      name: switchly-swap
+    match:
+      authority:
+        exact: ""
+      path:
+        prefix: /
+name: switchly-app
+region: sfo
 services:
-- name: web
-  source_dir: /
-  github:
-    repo: SwitchlyProtocol/switchly-swap
-    branch: main
-  run_command: serve -s dist -l 8080
-  environment_slug: node-js
-  instance_count: 1
-  instance_size_slug: basic-xxs
-  dockerfile_path: Dockerfile
-  http_port: 8080
+- dockerfile_path: /Dockerfile
   envs:
   - key: VITE_ETHEREUM_RPC_URL
+    scope: RUN_AND_BUILD_TIME
     value: http://64.23.228.195:8545
-    scope: BUILD_TIME
   - key: VITE_SWITCHLY_API_BASE_URL
+    scope: RUN_AND_BUILD_TIME
     value: http://64.23.228.195:1317
-    scope: BUILD_TIME
   - key: VITE_SWITCHLY_MIDGARD_BASE_URL
+    scope: RUN_AND_BUILD_TIME
     value: http://64.23.228.195:8080
-    scope: BUILD_TIME
   - key: VITE_STELLAR_HORIZON_URL
+    scope: RUN_AND_BUILD_TIME
     value: https://horizon-testnet.stellar.org
-    scope: BUILD_TIME
   - key: VITE_STELLAR_SOROBAN_URL
+    scope: RUN_AND_BUILD_TIME
     value: https://soroban-testnet.stellar.org
-    scope: BUILD_TIME
   - key: VITE_SWITCHLY_SERVICE_WS
+    scope: RUN_AND_BUILD_TIME
     value: ws://64.23.228.195:8080
-    scope: BUILD_TIME
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: SwitchlyProtocol/switchly-swap
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-2gb
+  name: switchly-swap
+  source_dir: /
