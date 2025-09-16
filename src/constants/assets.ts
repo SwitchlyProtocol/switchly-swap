@@ -1,8 +1,10 @@
 import { Asset, ChainId } from '../types';
 
 // Switchly Network Configuration - Use proxy endpoints to avoid CORS issues
-export const SWITCHLY_API_BASE_URL = import.meta.env.VITE_SWITCHLY_API_BASE_URL || '/api/switchly';
-export const SWITCHLY_MIDGARD_BASE_URL = import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard';
+// Force proxy usage in production to avoid mixed content and CORS issues
+const isProduction = window.location.protocol === 'https:';
+export const SWITCHLY_API_BASE_URL = isProduction ? '/api/switchly' : (import.meta.env.VITE_SWITCHLY_API_BASE_URL || '/api/switchly');
+export const SWITCHLY_MIDGARD_BASE_URL = isProduction ? '/api/midgard' : (import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard');
 
 // RPC Endpoints
 export const ETHEREUM_RPC_URL = import.meta.env.VITE_ETHEREUM_RPC_URL || 'https://sepolia.infura.io/v3/demo';

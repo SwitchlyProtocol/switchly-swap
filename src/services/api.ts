@@ -15,8 +15,10 @@ class SwitchlyAPI {
   private midgardUrl: string;
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_SWITCHLY_API_BASE_URL || '/api/switchly';
-    this.midgardUrl = import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard';
+    // Force proxy usage in production to avoid mixed content and CORS issues
+    const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    this.baseUrl = isProduction ? '/api/switchly' : (import.meta.env.VITE_SWITCHLY_API_BASE_URL || '/api/switchly');
+    this.midgardUrl = isProduction ? '/api/midgard' : (import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard');
     
     // Debug: Log API URLs being used
     console.log('🔧 API Service Configuration:');

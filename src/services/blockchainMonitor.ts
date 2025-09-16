@@ -54,7 +54,9 @@ export class BlockchainMonitor {
     );
     
     this.stellarHorizonUrl = import.meta.env.VITE_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org';
-    this.switchlyMidgardUrl = import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard';
+    // Force proxy usage in production to avoid mixed content and CORS issues
+    const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    this.switchlyMidgardUrl = isProduction ? '/api/midgard' : (import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard');
   }
 
   // Monitor Ethereum transaction status
