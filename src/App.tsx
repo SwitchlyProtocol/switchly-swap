@@ -372,19 +372,62 @@ function App() {
 
             // Update target transaction details
             let updatedTargetTx = prev.targetTx;
-            if (update.target && update.switchly?.out?.[0]) {
+            
+            // Set target tx from outbound queue even if destination monitoring hasn't found it yet
+            if (update.switchly?.out?.[0] && !updatedTargetTx) {
+              const targetTxHash = update.switchly.out[0].txID;
               const targetExplorerUrl = sourceChain === 'ethereum' 
-                ? `https://stellar.expert/explorer/testnet/tx/${update.switchly.out[0].txID}`
-                : `https://sepolia.etherscan.io/tx/${update.switchly.out[0].txID}`;
+                ? `https://stellar.expert/explorer/testnet/tx/${targetTxHash}`
+                : `https://sepolia.etherscan.io/tx/${targetTxHash}`;
 
               updatedTargetTx = {
-                hash: update.switchly.out[0].txID,
+                hash: targetTxHash,
                 explorerUrl: targetExplorerUrl,
                 timestamp: new Date(),
-                confirmations: 'confirmations' in update.target ? update.target.confirmations : undefined,
-                blockNumber: 'blockNumber' in update.target ? update.target.blockNumber : undefined,
-                status: update.target.status
+                confirmations: undefined,
+                blockNumber: undefined,
+                status: 'pending' // Initially pending until destination monitoring confirms
               };
+              
+              console.log('🎯 Target transaction detected from outbound queue:', targetTxHash);
+            }
+            
+            // Update target tx details if destination monitoring provides more info
+            if (update.target) {
+              if (updatedTargetTx) {
+                // Update existing target tx with destination monitoring details
+                updatedTargetTx = {
+                  ...updatedTargetTx,
+                  hash: update.target.hash, // Use the actual destination tx hash from monitoring
+                  confirmations: 'confirmations' in update.target ? update.target.confirmations : updatedTargetTx.confirmations,
+                  blockNumber: 'blockNumber' in update.target ? update.target.blockNumber : updatedTargetTx.blockNumber,
+                  status: update.target.status
+                };
+                
+                // Update explorer URL with the actual destination tx hash
+                const actualTargetExplorerUrl = sourceChain === 'ethereum' 
+                  ? `https://stellar.expert/explorer/testnet/tx/${update.target.hash}`
+                  : `https://sepolia.etherscan.io/tx/${update.target.hash}`;
+                updatedTargetTx.explorerUrl = actualTargetExplorerUrl;
+                
+                console.log('🎯 Target transaction confirmed by destination monitoring:', update.target.hash);
+              } else {
+                // Create target tx from destination monitoring if not set from outbound queue
+                const targetExplorerUrl = sourceChain === 'ethereum' 
+                  ? `https://stellar.expert/explorer/testnet/tx/${update.target.hash}`
+                  : `https://sepolia.etherscan.io/tx/${update.target.hash}`;
+
+                updatedTargetTx = {
+                  hash: update.target.hash,
+                  explorerUrl: targetExplorerUrl,
+                  timestamp: new Date(),
+                  confirmations: 'confirmations' in update.target ? update.target.confirmations : undefined,
+                  blockNumber: 'blockNumber' in update.target ? update.target.blockNumber : undefined,
+                  status: update.target.status
+                };
+                
+                console.log('🎯 Target transaction detected by destination monitoring:', update.target.hash);
+              }
             }
 
             return {
@@ -1063,7 +1106,7 @@ function App() {
           </div>
         </div>
       )}
-    </div>
+      </div>
   );
 }
 
