@@ -33,8 +33,17 @@ RUN npm i -g serve
 
 COPY . .
 
+# Debug: Print environment variables during build
+RUN echo "=== Environment Variables Debug ===" && \
+    echo "VITE_ETHEREUM_RPC_URL: $VITE_ETHEREUM_RPC_URL" && \
+    echo "VITE_SWITCHLY_API_BASE_URL: $VITE_SWITCHLY_API_BASE_URL" && \
+    echo "VITE_SWITCHLY_MIDGARD_BASE_URL: $VITE_SWITCHLY_MIDGARD_BASE_URL" && \
+    echo "VITE_STELLAR_HORIZON_URL: $VITE_STELLAR_HORIZON_URL" && \
+    echo "VITE_STELLAR_SOROBAN_URL: $VITE_STELLAR_SOROBAN_URL" && \
+    echo "VITE_SWITCHLY_SERVICE_WS: $VITE_SWITCHLY_SERVICE_WS" && \
+    echo "==================================="
+
 # Build with environment variables available
-# First try normal build (should work with RUN_AND_BUILD_TIME scope)
 RUN npm run build
 
 EXPOSE 8080
