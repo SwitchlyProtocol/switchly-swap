@@ -138,6 +138,57 @@ export class BlockchainMonitor {
     }
   }
 
+  // High-frequency destination monitoring for real-time transaction detection
+  async startHighFrequencyDestinationMonitoring(
+    destinationAddress: string,
+    sourceTxHash: string,
+    chain: 'ethereum' | 'stellar',
+    onUpdate: (tx: { hash: string; status: 'pending' | 'confirmed' | 'failed' } | null) => void,
+    maxDuration: number = 120000 // 2 minutes max
+  ): Promise<() => void> {
+    let isMonitoring = true;
+    let lastTxHash: string | null = null;
+    const startTime = Date.now();
+
+    const monitor = async () => {
+      if (!isMonitoring || (Date.now() - startTime) > maxDuration) {
+        isMonitoring = false;
+        return;
+      }
+
+      try {
+        const destinationTx = await this.monitorDestinationAddress(destinationAddress, sourceTxHash, chain);
+        
+        // Only trigger update if we found a new transaction or status changed
+        if (destinationTx && destinationTx.hash !== lastTxHash) {
+          console.log('🎯 Destination transaction detected:', destinationTx.hash, 'status:', destinationTx.status);
+          lastTxHash = destinationTx.hash;
+          onUpdate(destinationTx);
+        } else if (!destinationTx && lastTxHash !== null) {
+          // Transaction disappeared (shouldn't happen but handle it)
+          lastTxHash = null;
+          onUpdate(null);
+        }
+
+        // High-frequency polling for destination detection
+        // Stellar: 300ms intervals, Ethereum: 500ms intervals (due to block times)
+        const pollInterval = chain === 'stellar' ? 300 : 500;
+        setTimeout(monitor, pollInterval);
+      } catch (error) {
+        console.error('High-frequency destination monitoring error:', error);
+        setTimeout(monitor, 2000); // Back off to 2s on error
+      }
+    };
+
+    // Start monitoring
+    monitor();
+
+    // Return cleanup function
+    return () => {
+      isMonitoring = false;
+    };
+  }
+
   // Monitor destination address for incoming transactions with OUT:txhash memo
   async monitorDestinationAddress(
     destinationAddress: string, 
@@ -473,7 +524,8 @@ export class BlockchainMonitor {
     let isMonitoring = true;
     let targetTxHash: string | null = null;
     let targetChain: 'ethereum' | 'stellar' = sourceChain === 'ethereum' ? 'stellar' : 'ethereum';
-    let highFreqCleanup: (() => void) | null = null;
+    let highFreqSwitchlyCleanup: (() => void) | null = null;
+    let highFreqDestinationCleanup: (() => void) | null = null;
 
     const monitor = async () => {
       if (!isMonitoring) return;
@@ -485,9 +537,9 @@ export class BlockchainMonitor {
           : await this.monitorStellarTransaction(sourceTxHash);
 
         // Start high-frequency Switchly monitoring once source is confirmed
-        if (sourceStatus.status === 'confirmed' && !highFreqCleanup) {
+        if (sourceStatus.status === 'confirmed' && !highFreqSwitchlyCleanup) {
           console.log('🚀 Starting high-frequency Switchly monitoring for', sourceTxHash);
-          highFreqCleanup = await this.startHighFrequencySwitchlyMonitoring(
+          highFreqSwitchlyCleanup = await this.startHighFrequencySwitchlyMonitoring(
             sourceTxHash,
             (action) => {
               // Trigger immediate update when Switchly status changes
@@ -509,7 +561,35 @@ export class BlockchainMonitor {
           targetTxHash = switchlyAction.out[0].txID;
         }
 
-        // If no target tx from outbound queue, monitor destination address for OUT memo
+        // Start high-frequency destination monitoring when Switchly is successful
+        if (switchlyAction?.status === 'success' && !highFreqDestinationCleanup) {
+          console.log('🎯 Starting high-frequency destination monitoring for', destinationAddress);
+          highFreqDestinationCleanup = await this.startHighFrequencyDestinationMonitoring(
+            destinationAddress,
+            sourceTxHash,
+            targetChain,
+            (destinationTx) => {
+              if (destinationTx) {
+                console.log('⚡ High-frequency destination update:', destinationTx.hash, destinationTx.status);
+                const targetStatus = {
+                  hash: destinationTx.hash,
+                  status: destinationTx.status,
+                  ...(targetChain === 'ethereum' 
+                    ? { confirmations: 1, blockNumber: 0 } 
+                    : { ledger: 0, timestamp: Date.now() })
+                } as EthereumTxStatus | StellarTxStatus;
+                
+                onUpdate({
+                  source: sourceStatus,
+                  switchly: switchlyAction,
+                  target: targetStatus
+                });
+              }
+            }
+          );
+        }
+
+        // If no target tx from outbound queue, monitor destination address for OUT memo (backup)
         let targetStatus: EthereumTxStatus | StellarTxStatus | undefined;
         if (!targetTxHash && switchlyAction?.status === 'success') {
           // Look for destination transaction by monitoring address for OUT:txhash memo
@@ -578,8 +658,11 @@ export class BlockchainMonitor {
     // Return cleanup function
     return () => {
       isMonitoring = false;
-      if (highFreqCleanup) {
-        highFreqCleanup();
+      if (highFreqSwitchlyCleanup) {
+        highFreqSwitchlyCleanup();
+      }
+      if (highFreqDestinationCleanup) {
+        highFreqDestinationCleanup();
       }
     };
   }
