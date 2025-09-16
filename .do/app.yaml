@@ -1,0 +1,33 @@
+# DigitalOcean App Platform Specification
+name: switchly-swap
+services:
+- name: web
+  source_dir: /
+  github:
+    repo: SwitchlyProtocol/switchly-swap
+    branch: main
+  run_command: serve -s dist -l 8080
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  dockerfile_path: Dockerfile
+  http_port: 8080
+  envs:
+  - key: VITE_ETHEREUM_RPC_URL
+    value: http://64.23.228.195:8545
+    scope: BUILD_TIME
+  - key: VITE_SWITCHLY_API_BASE_URL
+    value: http://64.23.228.195:1317
+    scope: BUILD_TIME
+  - key: VITE_SWITCHLY_MIDGARD_BASE_URL
+    value: http://64.23.228.195:8080
+    scope: BUILD_TIME
+  - key: VITE_STELLAR_HORIZON_URL
+    value: https://horizon-testnet.stellar.org
+    scope: BUILD_TIME
+  - key: VITE_STELLAR_SOROBAN_URL
+    value: https://soroban-testnet.stellar.org
+    scope: BUILD_TIME
+  - key: VITE_SWITCHLY_SERVICE_WS
+    value: ws://64.23.228.195:8080
+    scope: BUILD_TIME
