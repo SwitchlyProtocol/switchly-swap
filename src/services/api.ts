@@ -17,6 +17,13 @@ class SwitchlyAPI {
   constructor() {
     this.baseUrl = import.meta.env.VITE_SWITCHLY_API_BASE_URL || 'http://64.23.228.195:1317';
     this.midgardUrl = import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || 'http://64.23.228.195:8080';
+    
+    // Debug: Log API URLs being used
+    console.log('🔧 API Service Configuration:');
+    console.log('Base URL (Switchly API):', this.baseUrl);
+    console.log('Midgard URL:', this.midgardUrl);
+    console.log('Environment VITE_SWITCHLY_API_BASE_URL:', import.meta.env.VITE_SWITCHLY_API_BASE_URL);
+    console.log('Environment VITE_SWITCHLY_MIDGARD_BASE_URL:', import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL);
   }
 
   /**
@@ -27,6 +34,7 @@ class SwitchlyAPI {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
+      console.log('🌐 API Request:', url);
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
@@ -36,6 +44,11 @@ class SwitchlyAPI {
       });
 
       if (!response.ok) {
+        console.error('❌ API Request Failed:', {
+          url,
+          status: response.status,
+          statusText: response.statusText
+        });
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -46,7 +59,11 @@ class SwitchlyAPI {
         data,
       };
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('❌ API Request Exception:', {
+        url,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
