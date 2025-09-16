@@ -13,12 +13,14 @@ import {
 class SwitchlyAPI {
   private baseUrl: string;
   private midgardUrl: string;
+  private isUsingProxy: boolean;
 
   constructor() {
     // Force proxy usage in production to avoid mixed content and CORS issues
     const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:';
     this.baseUrl = isProduction ? '/api/switchly' : (import.meta.env.VITE_SWITCHLY_API_BASE_URL || '/api/switchly');
     this.midgardUrl = isProduction ? '/api/midgard' : (import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard');
+    this.isUsingProxy = isProduction || this.baseUrl.startsWith('/api/');
     
     // Debug: Log API URLs being used
     console.log('🔧 API Service Configuration:');
@@ -77,14 +79,18 @@ class SwitchlyAPI {
    * Get inbound addresses for all chains
    */
   async getInboundAddresses(): Promise<ApiResponse<InboundAddress[]>> {
-    return this.request<InboundAddress[]>(`${this.baseUrl}/switchly/inbound_addresses`);
+    // When using proxy, the path rewriting handles /switchly prefix
+    const path = this.isUsingProxy ? '/inbound_addresses' : '/switchly/inbound_addresses';
+    return this.request<InboundAddress[]>(`${this.baseUrl}${path}`);
   }
 
   /**
    * Get vault information
    */
   async getVaults(): Promise<ApiResponse<VaultInfo[]>> {
-    return this.request<VaultInfo[]>(`${this.baseUrl}/switchly/vaults/asgard`);
+    // When using proxy, the path rewriting handles /switchly prefix
+    const path = this.isUsingProxy ? '/vaults/asgard' : '/switchly/vaults/asgard';
+    return this.request<VaultInfo[]>(`${this.baseUrl}${path}`);
   }
 
   /**
@@ -176,7 +182,9 @@ class SwitchlyAPI {
    * Get pool information from Switchly Network
    */
   async getPools(): Promise<ApiResponse<SwitchlyPool[]>> {
-    return this.request<SwitchlyPool[]>(`${this.baseUrl}/switchly/pools`);
+    // When using proxy, the path rewriting handles /switchly prefix
+    const path = this.isUsingProxy ? '/pools' : '/switchly/pools';
+    return this.request<SwitchlyPool[]>(`${this.baseUrl}${path}`);
   }
 
   /**
