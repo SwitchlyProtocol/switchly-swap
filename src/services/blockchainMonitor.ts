@@ -280,7 +280,7 @@ export class BlockchainMonitor {
           console.log('📋 Found', allLogs.length, 'total TransferOut events in range');
           
           // Approach 2: Try to filter by destination address if events are indexed
-          let filteredLogs = [];
+          let filteredLogs: any[] = [];
           try {
             const addressFilter = {
               address: routerAddress,
@@ -295,8 +295,8 @@ export class BlockchainMonitor {
             
             filteredLogs = await this.ethereumProvider.getLogs(addressFilter);
             console.log('📋 Found', filteredLogs.length, 'TransferOut events filtered by destination address');
-          } catch (filterError) {
-            console.log('⚠️ Address filtering failed, using broad search:', filterError.message);
+          } catch (filterError: any) {
+            console.log('⚠️ Address filtering failed, using broad search:', filterError?.message || 'Unknown error');
             filteredLogs = allLogs;
           }
           
