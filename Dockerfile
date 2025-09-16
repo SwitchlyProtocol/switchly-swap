@@ -34,7 +34,8 @@ RUN npm i -g serve
 COPY . .
 
 # Build with environment variables available
-RUN npm run build
+# If ARG/ENV approach fails, use the build script as fallback
+RUN chmod +x build-with-env.sh && ./build-with-env.sh
 
 EXPOSE 8080
 
