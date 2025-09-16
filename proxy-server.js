@@ -45,7 +45,9 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Proxy server running on port ${PORT}`);
-  console.log(`Proxying /api/switchly/* to http://64.23.228.195:1317/switchly/*`);
-  console.log(`Proxying /api/midgard/* to http://64.23.228.195:8080/*`);
+  console.log(`🚀 Proxy server running on port ${PORT}`);
+  console.log(`📡 Proxying /api/switchly/* to http://64.23.228.195:1317/switchly/*`);
+  console.log(`📡 Proxying /api/midgard/* to http://64.23.228.195:8080/*`);
+  console.log(`📁 Serving static files from: ${path.join(__dirname, 'dist')}`);
+  console.log(`🌐 CORS enabled for all origins`);
 });
