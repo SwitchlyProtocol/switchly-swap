@@ -251,8 +251,10 @@ export class BlockchainMonitor {
       } else if (chain === 'ethereum') {
         // Monitor Ethereum router contract for transfer_out events
         console.log('🔍 Monitoring Ethereum router for transfer_out events to:', destinationAddress);
+        console.log('🔍 XLM→ETH swap - monitoring for destination transaction');
         
         const routerAddress = '0x5DB9A7629912EBF95876228C24A848de0bfB43A9';
+        console.log('🔍 Using router address:', routerAddress);
         
         // Define the transfer_out event signature based on actual contract
         // emit TransferOut(msg.sender, to, asset, safeAmount, memo);
@@ -261,7 +263,8 @@ export class BlockchainMonitor {
         try {
           // Get recent blocks to search for events with expanded range
           const currentBlock = await this.ethereumProvider.getBlockNumber();
-          const fromBlock = Math.max(0, currentBlock - 500); // Check last 500 blocks for better coverage
+          const fromBlock = Math.max(0, currentBlock - 2000); // Check last 2000 blocks for better coverage
+          console.log('🔍 Current block:', currentBlock, 'searching from block:', fromBlock);
           
           console.log('🔍 Searching Ethereum blocks', fromBlock, 'to', currentBlock, 'for TransferOut events');
           console.log('🔍 Router address:', routerAddress);
@@ -280,6 +283,31 @@ export class BlockchainMonitor {
           
           const allLogs = await this.ethereumProvider.getLogs(broadFilter);
           console.log('📋 Found', allLogs.length, 'total TransferOut events in range');
+          
+          // Debug: Log all TransferOut events for analysis
+          if (allLogs.length > 0) {
+            console.log('🔍 All TransferOut events found:');
+            for (let i = 0; i < Math.min(allLogs.length, 10); i++) { // Show first 10
+              const log = allLogs[i];
+              try {
+                const iface = new ethers.Interface([
+                  "event TransferOut(address sender, address to, address asset, uint256 amount, string memo)"
+                ]);
+                const decoded = iface.parseLog(log);
+                if (decoded) {
+                  console.log(`  Event ${i + 1}:`, {
+                    txHash: log.transactionHash,
+                    blockNumber: log.blockNumber,
+                    to: decoded.args.to,
+                    memo: decoded.args.memo,
+                    amount: decoded.args.amount.toString()
+                  });
+                }
+              } catch (e) {
+                console.log(`  Event ${i + 1}: Failed to decode`, log.transactionHash);
+              }
+            }
+          }
           
           // Approach 2: Try to filter by destination address if events are indexed
           let filteredLogs: any[] = [];
