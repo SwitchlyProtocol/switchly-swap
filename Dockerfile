@@ -29,8 +29,6 @@ RUN npm install
 RUN npm uninstall esbuild vite @vitejs/plugin-react-swc
 RUN npm install esbuild@latest vite@latest @vitejs/plugin-react-swc@latest
 
-RUN npm i -g serve
-
 COPY . .
 
 # Debug: Print environment variables during build
@@ -48,4 +46,4 @@ RUN npm run build
 
 EXPOSE 8080
 
-CMD [ "serve", "-s", "dist", "-l", "8080" ]
+CMD [ "node", "proxy-server.js" ]

@@ -15,8 +15,8 @@ class SwitchlyAPI {
   private midgardUrl: string;
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_SWITCHLY_API_BASE_URL || 'http://64.23.228.195:1317';
-    this.midgardUrl = import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || 'http://64.23.228.195:8080';
+    this.baseUrl = import.meta.env.VITE_SWITCHLY_API_BASE_URL || '/api/switchly';
+    this.midgardUrl = import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard';
     
     // Debug: Log API URLs being used
     console.log('🔧 API Service Configuration:');

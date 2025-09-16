@@ -54,7 +54,7 @@ export class BlockchainMonitor {
     );
     
     this.stellarHorizonUrl = import.meta.env.VITE_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org';
-    this.switchlyMidgardUrl = import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || 'http://64.23.228.195:8080';
+    this.switchlyMidgardUrl = import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard';
   }
 
   // Monitor Ethereum transaction status
@@ -450,7 +450,7 @@ export class BlockchainMonitor {
   // Monitor Switchly outbound queue for real-time transaction status
   async monitorSwitchlyActions(sourceTxHash: string): Promise<SwitchlyAction | null> {
     try {
-      const response = await fetch(`${this.switchlyMidgardUrl.replace(':8080', ':1317')}/switchly/queue/outbound`);
+      const response = await fetch(`/api/switchly/queue/outbound`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }

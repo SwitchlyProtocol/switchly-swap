@@ -1,8 +1,8 @@
 import { Asset, ChainId } from '../types';
 
-// Switchly Network Configuration
-export const SWITCHLY_API_BASE_URL = import.meta.env.VITE_SWITCHLY_API_BASE_URL || 'http://64.23.228.195:1317';
-export const SWITCHLY_MIDGARD_BASE_URL = import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || 'http://64.23.228.195:8080';
+// Switchly Network Configuration - Use proxy endpoints to avoid CORS issues
+export const SWITCHLY_API_BASE_URL = import.meta.env.VITE_SWITCHLY_API_BASE_URL || '/api/switchly';
+export const SWITCHLY_MIDGARD_BASE_URL = import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard';
 
 // RPC Endpoints
 export const ETHEREUM_RPC_URL = import.meta.env.VITE_ETHEREUM_RPC_URL || 'https://sepolia.infura.io/v3/demo';
