@@ -292,6 +292,53 @@ export class BlockchainMonitor {
     }
   }
 
+  // High-frequency Switchly monitoring specifically for real-time updates
+  async startHighFrequencySwitchlyMonitoring(
+    sourceTxHash: string,
+    onUpdate: (action: SwitchlyAction | null) => void,
+    maxDuration: number = 60000 // 1 minute max
+  ): Promise<() => void> {
+    let isMonitoring = true;
+    let lastActionStatus: string | null = null;
+    const startTime = Date.now();
+
+    const monitor = async () => {
+      if (!isMonitoring || (Date.now() - startTime) > maxDuration) {
+        isMonitoring = false;
+        return;
+      }
+
+      try {
+        const switchlyAction = await this.monitorSwitchlyActions(sourceTxHash);
+        
+        // Only trigger update if status changed or it's the first time we found an action
+        if (switchlyAction && switchlyAction.status !== lastActionStatus) {
+          console.log('🚀 Switchly status change detected:', lastActionStatus, '->', switchlyAction.status);
+          lastActionStatus = switchlyAction.status;
+          onUpdate(switchlyAction);
+        } else if (!switchlyAction && lastActionStatus !== null) {
+          // Action disappeared from queue (shouldn't happen but handle it)
+          lastActionStatus = null;
+          onUpdate(null);
+        }
+
+        // Very aggressive polling - every 200ms for Switchly updates
+        setTimeout(monitor, 200);
+      } catch (error) {
+        console.error('High-frequency Switchly monitoring error:', error);
+        setTimeout(monitor, 1000); // Back off to 1s on error
+      }
+    };
+
+    // Start monitoring
+    monitor();
+
+    // Return cleanup function
+    return () => {
+      isMonitoring = false;
+    };
+  }
+
   // Monitor Switchly outbound queue for real-time transaction status
   async monitorSwitchlyActions(sourceTxHash: string): Promise<SwitchlyAction | null> {
     try {
@@ -426,6 +473,7 @@ export class BlockchainMonitor {
     let isMonitoring = true;
     let targetTxHash: string | null = null;
     let targetChain: 'ethereum' | 'stellar' = sourceChain === 'ethereum' ? 'stellar' : 'ethereum';
+    let highFreqCleanup: (() => void) | null = null;
 
     const monitor = async () => {
       if (!isMonitoring) return;
@@ -436,7 +484,24 @@ export class BlockchainMonitor {
           ? await this.monitorEthereumTransaction(sourceTxHash)
           : await this.monitorStellarTransaction(sourceTxHash);
 
-        // Monitor Switchly actions
+        // Start high-frequency Switchly monitoring once source is confirmed
+        if (sourceStatus.status === 'confirmed' && !highFreqCleanup) {
+          console.log('🚀 Starting high-frequency Switchly monitoring for', sourceTxHash);
+          highFreqCleanup = await this.startHighFrequencySwitchlyMonitoring(
+            sourceTxHash,
+            (action) => {
+              // Trigger immediate update when Switchly status changes
+              console.log('⚡ High-frequency Switchly update:', action?.status);
+              onUpdate({
+                source: sourceStatus,
+                switchly: action,
+                target: undefined
+              });
+            }
+          );
+        }
+
+        // Monitor Switchly actions (regular polling as backup)
         const switchlyAction = await this.monitorSwitchlyActions(sourceTxHash);
 
         // Check if we have a target transaction from outbound queue
@@ -484,14 +549,17 @@ export class BlockchainMonitor {
           target: targetStatus
         });
 
-        // Continue monitoring if not completed
+        // Continue monitoring if not completed with aggressive polling for Switchly
         if (
           sourceStatus.status === 'pending' ||
           !switchlyAction ||
           switchlyAction.status === 'pending' ||
           (switchlyAction.status === 'success' && (!targetStatus || targetStatus.status === 'pending'))
         ) {
-          setTimeout(monitor, 3000); // Poll every 3 seconds
+          // Use much more frequent polling for better real-time tracking
+          // Switchly processing is typically fast, so we need high-frequency monitoring
+          const pollInterval = !switchlyAction ? 500 : 1000; // 0.5s if no Switchly action yet, 1s otherwise
+          setTimeout(monitor, pollInterval);
         } else {
           isMonitoring = false;
         }
@@ -510,6 +578,9 @@ export class BlockchainMonitor {
     // Return cleanup function
     return () => {
       isMonitoring = false;
+      if (highFreqCleanup) {
+        highFreqCleanup();
+      }
     };
   }
 }
