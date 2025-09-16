@@ -293,10 +293,18 @@ function App() {
   };
 
   const disconnectWallet = () => {
+    // Disconnect from the appropriate wallet
+    if (walletType === 'metamask') {
+      disconnectEthereum();
+    } else if (walletType === 'freighter') {
+      disconnectStellar();
+    }
+    
+    // Clear app state
     setIsWalletConnected(false);
     setConnectedWalletAddress("");
     setWalletType(null);
-    console.log('Wallet disconnected');
+    console.log('Wallet disconnected:', walletType);
   };
 
   const openWalletModal = () => {

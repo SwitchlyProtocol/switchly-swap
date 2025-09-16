@@ -173,11 +173,27 @@ export function useWallet(): UseWalletReturn {
   }, []);
 
   const disconnectEthereum = useCallback(() => {
+    console.log('Disconnecting Ethereum wallet...');
+    
+    // Clear the wallet state
     setEthereumWallet({ isConnected: false });
+    
+    // Note: MetaMask doesn't have a programmatic disconnect method
+    // The user would need to disconnect manually in MetaMask extension
+    // But we clear our app's connection state
+    console.log('Ethereum wallet disconnected from app');
   }, []);
 
   const disconnectStellar = useCallback(() => {
+    console.log('Disconnecting Stellar wallet...');
+    
+    // Clear the wallet state
     setStellarWallet({ isConnected: false });
+    
+    // Note: Freighter doesn't have a programmatic disconnect method either
+    // The user would need to disconnect manually in Freighter extension
+    // But we clear our app's connection state
+    console.log('Stellar wallet disconnected from app');
   }, []);
 
   const getBalance = useCallback(async (chainId: ChainId, tokenAddress?: string): Promise<string | null> => {
