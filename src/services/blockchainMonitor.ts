@@ -257,24 +257,50 @@ export class BlockchainMonitor {
         const transferOutTopic = ethers.id("TransferOut(address,address,address,uint256,string)");
         
         try {
-          // Get recent blocks to search for events
+          // Get recent blocks to search for events with expanded range
           const currentBlock = await this.ethereumProvider.getBlockNumber();
-          const fromBlock = Math.max(0, currentBlock - 100); // Check last 100 blocks
+          const fromBlock = Math.max(0, currentBlock - 500); // Check last 500 blocks for better coverage
           
-          console.log('🔍 Searching blocks', fromBlock, 'to', currentBlock, 'for transfer_out events');
+          console.log('🔍 Searching Ethereum blocks', fromBlock, 'to', currentBlock, 'for TransferOut events');
+          console.log('🔍 Router address:', routerAddress);
+          console.log('🔍 Destination address:', destinationAddress);
+          console.log('🔍 Source tx hash:', cleanSourceTxHash);
           
-          // Filter for TransferOut events to our destination address
-          // Note: Only the first 3 topics can be indexed, but the event signature suggests none are indexed
-          // So we'll search all TransferOut events and filter by destination address in the decoded data
-          const filter = {
+          // Try multiple approaches to find the event
+          
+          // Approach 1: Search all TransferOut events (broad search)
+          const broadFilter = {
             address: routerAddress,
-            topics: [transferOutTopic], // Only filter by event signature
+            topics: [transferOutTopic],
             fromBlock: fromBlock,
             toBlock: currentBlock
           };
           
-          const logs = await this.ethereumProvider.getLogs(filter);
-          console.log('📋 Found', logs.length, 'TransferOut events for address:', destinationAddress);
+          const allLogs = await this.ethereumProvider.getLogs(broadFilter);
+          console.log('📋 Found', allLogs.length, 'total TransferOut events in range');
+          
+          // Approach 2: Try to filter by destination address if events are indexed
+          let filteredLogs = [];
+          try {
+            const addressFilter = {
+              address: routerAddress,
+              topics: [
+                transferOutTopic,
+                null, // sender (not filtering)
+                ethers.zeroPadValue(destinationAddress.toLowerCase(), 32) // to address (try as indexed)
+              ],
+              fromBlock: fromBlock,
+              toBlock: currentBlock
+            };
+            
+            filteredLogs = await this.ethereumProvider.getLogs(addressFilter);
+            console.log('📋 Found', filteredLogs.length, 'TransferOut events filtered by destination address');
+          } catch (filterError) {
+            console.log('⚠️ Address filtering failed, using broad search:', filterError.message);
+            filteredLogs = allLogs;
+          }
+          
+          const logs = filteredLogs.length > 0 ? filteredLogs : allLogs;
           
           // Check each event for matching destination address and OUT:TXHASH memo
           for (const log of logs) {
@@ -298,10 +324,12 @@ export class BlockchainMonitor {
                   // Check if memo matches OUT:TXHASH format with our source transaction hash
                   if (memo && memo.startsWith('OUT:')) {
                     const memoTxHash = memo.slice(4); // Remove 'OUT:' prefix
+                    console.log('🔍 Comparing memo hash:', memoTxHash, 'with source:', cleanSourceTxHash);
                     
                     // Handle truncated memo format: OUT:5CBA0D14...8DB2DB1EA46E (same as Stellar)
                     if (memoTxHash.includes('...')) {
                       const [start, end] = memoTxHash.split('...');
+                      console.log('🔍 Truncated memo - start:', start, 'end:', end);
                       if (cleanSourceTxHash.startsWith(start) && cleanSourceTxHash.endsWith(end)) {
                         console.log('✅ Found matching TransferOut event with truncated memo:', log.transactionHash, 'memo:', memo);
                         return {
@@ -310,8 +338,11 @@ export class BlockchainMonitor {
                         };
                       }
                     } else {
-                      // Handle full hash
-                      if (cleanSourceTxHash === memoTxHash.toUpperCase()) {
+                      // Handle full hash - try multiple comparison methods
+                      const memoHashUpper = memoTxHash.toUpperCase();
+                      if (cleanSourceTxHash === memoHashUpper || 
+                          cleanSourceTxHash.includes(memoHashUpper) ||
+                          memoHashUpper.includes(cleanSourceTxHash)) {
                         console.log('✅ Found matching TransferOut event with full memo:', log.transactionHash, 'memo:', memo);
                         return {
                           hash: log.transactionHash,
@@ -319,11 +350,37 @@ export class BlockchainMonitor {
                         };
                       }
                     }
+                  } else {
+                    console.log('🔍 Event memo does not start with OUT:', memo);
                   }
                 }
               }
             } catch (decodeError) {
               console.error('Error decoding TransferOut event:', decodeError);
+            }
+          }
+          
+          // Debug: Show all TransferOut events to this destination address for debugging
+          console.log('🔍 Debug: Searching for ANY TransferOut events to destination address...');
+          for (const log of logs) {
+            try {
+              const iface = new ethers.Interface([
+                "event TransferOut(address sender, address to, address asset, uint256 amount, string memo)"
+              ]);
+              const decoded = iface.parseLog(log);
+              
+              if (decoded && decoded.args.to.toLowerCase() === destinationAddress.toLowerCase()) {
+                console.log('🔍 Debug: Found TransferOut to destination:', {
+                  txHash: log.transactionHash,
+                  blockNumber: log.blockNumber,
+                  to: decoded.args.to,
+                  memo: decoded.args.memo,
+                  amount: decoded.args.amount.toString(),
+                  asset: decoded.args.asset
+                });
+              }
+            } catch (e) {
+              // Ignore decode errors in debug
             }
           }
           
