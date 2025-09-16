@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { switchlyAPI } from "../services/api";
-import { REFRESH_INTERVALS } from "../constants/assets";
+// import { REFRESH_INTERVALS } from "../constants/assets"; // Not used
 import { SwitchlyPool } from "../types";
 
 interface UsePoolsReturn {

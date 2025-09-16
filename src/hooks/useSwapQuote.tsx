@@ -34,7 +34,7 @@ export function useSwapQuote({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const { calculateSwapOutput, pools, isLoading: poolsLoading } = usePools();
+  const { calculateSwapOutput, isLoading: poolsLoading } = usePools();
 
   const fetchQuote = useCallback(async () => {
     if (!fromAsset || !toAsset || !amount || parseFloat(amount) <= 0) {

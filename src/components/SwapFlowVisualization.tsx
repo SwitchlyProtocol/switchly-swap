@@ -29,7 +29,7 @@ const SwapFlowVisualization: React.FC<SwapFlowVisualizationProps> = ({
   toAsset,
   amount,
   onComplete,
-  onError
+  onError: _onError
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState<SwapStep[]>([]);
@@ -261,7 +261,7 @@ const SwapFlowVisualization: React.FC<SwapFlowVisualizationProps> = ({
 
       {/* Step Details */}
       <div className="space-y-4">
-        {steps.map((step, index) => (
+        {steps.map((step, _index) => (
           <div key={step.id} className={`flex items-start space-x-4 p-3 rounded-lg transition-all duration-300 ${
             step.status === 'active' ? 'bg-blue-50 dark:bg-blue-900/20' : 
             step.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20' :

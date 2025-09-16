@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import AssetIcon from './AssetIcon';
+// import AssetIcon from './AssetIcon'; // Not used
 import CustomSelect from './CustomSelect';
 
 interface PremiumInputProps {
@@ -33,12 +33,12 @@ const PremiumInput: React.FC<PremiumInputProps> = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
-  const assets = [
-    "ETH (Ethereum Sepolia)",
-    "USDC (Ethereum Sepolia)", 
-    "XLM (Stellar Testnet)",
-    "USDC (Stellar Testnet)"
-  ];
+  // const assets = [
+  //   "ETH (Ethereum Sepolia)",
+  //   "USDC (Ethereum Sepolia)", 
+  //   "XLM (Stellar Testnet)",
+  //   "USDC (Stellar Testnet)"
+  // ];
 
   // Map UI asset names to pool asset names (same as in App.tsx)
   const getPoolAssetName = (uiAssetName: string): string => {
@@ -57,38 +57,38 @@ const PremiumInput: React.FC<PremiumInputProps> = ({
     return availablePools.includes(poolAsset);
   };
 
-  const getAvailableAssets = () => {
-    if (!excludeAsset) return assets;
-    
-    const excludeNetwork = excludeAsset.includes('Ethereum') ? 'Ethereum' : 'Stellar';
-    return assets.filter(asset => !asset.includes(excludeNetwork));
-  };
+  // const getAvailableAssets = () => {
+  //   if (!excludeAsset) return assets;
+  //   
+  //   const excludeNetwork = excludeAsset.includes('Ethereum') ? 'Ethereum' : 'Stellar';
+  //   return assets.filter(asset => !asset.includes(excludeNetwork));
+  // };
 
-  const getNetworkIcon = (asset: string) => {
-    if (asset.includes('Ethereum')) {
-      return (
-        <div className="flex items-center space-x-1">
-          <img 
-            src="/icons/ethereum-network.svg" 
-            alt="Ethereum" 
-            className="w-4 h-4"
-          />
-          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Ethereum</span>
-        </div>
-      );
-    } else {
-      return (
-        <div className="flex items-center space-x-1">
-          <img 
-            src="/icons/stellar-network.svg" 
-            alt="Stellar" 
-            className="w-4 h-4"
-          />
-          <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">Stellar</span>
-        </div>
-      );
-    }
-  };
+  // const getNetworkIcon = (asset: string) => {
+  //   if (asset.includes('Ethereum')) {
+  //     return (
+  //       <div className="flex items-center space-x-1">
+  //         <img 
+  //           src="/icons/ethereum-network.svg" 
+  //           alt="Ethereum" 
+  //           className="w-4 h-4"
+  //         />
+  //         <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Ethereum</span>
+  //       </div>
+  //     );
+  //   } else {
+  //     return (
+  //       <div className="flex items-center space-x-1">
+  //         <img 
+  //           src="/icons/stellar-network.svg" 
+  //           alt="Stellar" 
+  //           className="w-4 h-4"
+  //         />
+  //         <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">Stellar</span>
+  //       </div>
+  //     );
+  //   }
+  // };
 
   return (
     <div className="space-y-2">

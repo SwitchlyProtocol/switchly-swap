@@ -169,8 +169,8 @@ export const SUPPORTED_ASSETS: Record<string, Asset> = {
 
 // Dynamic Asset Display Names (based on current networks)
 export const getAssetDisplayName = (ticker: string): string => {
-  const ethNetworkName = CURRENT_ETHEREUM_NETWORK === 'mainnet' ? 'Ethereum' : 'Ethereum Sepolia';
-  const stellarNetworkName = CURRENT_STELLAR_NETWORK === 'mainnet' ? 'Stellar' : 'Stellar Testnet';
+  const ethNetworkName = CURRENT_ETHEREUM_NETWORK as string === 'mainnet' ? 'Ethereum' : 'Ethereum Sepolia';
+  const stellarNetworkName = CURRENT_STELLAR_NETWORK as string === 'mainnet' ? 'Stellar' : 'Stellar Testnet';
   
   const displayNames: Record<string, string> = {
     'ETH.ETH': `ETH (${ethNetworkName})`,
@@ -193,8 +193,8 @@ export const ASSET_DISPLAY_NAMES: Record<string, string> = {
 // Dynamic Chain Display Names
 export const getChainDisplayName = (chainId: ChainId): string => {
   const names: Record<ChainId, string> = {
-    ETH: CURRENT_ETHEREUM_NETWORK === 'mainnet' ? 'Ethereum' : 'Ethereum Sepolia',
-    XLM: CURRENT_STELLAR_NETWORK === 'mainnet' ? 'Stellar' : 'Stellar Testnet',
+    ETH: CURRENT_ETHEREUM_NETWORK as string === 'mainnet' ? 'Ethereum' : 'Ethereum Sepolia',
+    XLM: CURRENT_STELLAR_NETWORK as string === 'mainnet' ? 'Stellar' : 'Stellar Testnet',
     SWITCHLY: 'Switchly Network',
   };
   return names[chainId];

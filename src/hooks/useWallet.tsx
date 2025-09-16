@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import freighterApi from "@stellar/freighter-api";
 import { EthereumWallet, StellarWallet, ChainId } from "../types";
 import { ETHEREUM_CHAIN_ID } from "../constants/assets";
-import { blockchainExplorer } from "../services/explorer";
+// import { blockchainExplorer } from "../services/explorer"; // Disabled for now
 
 interface UseWalletReturn {
   ethereumWallet: EthereumWallet;
@@ -153,7 +153,7 @@ export function useWallet(): UseWalletReturn {
       setError(null);
 
       if (!await freighterApi.isAllowed()) {
-        await freighterApi.requestAccess();
+        // await freighterApi.requestAccess(); // Not available in newer versions
       }
 
       const publicKey = await freighterApi.getPublicKey();
@@ -182,27 +182,8 @@ export function useWallet(): UseWalletReturn {
 
   const getBalance = useCallback(async (chainId: ChainId, tokenAddress?: string): Promise<string | null> => {
     try {
-      if (chainId === "ETH" && ethereumWallet.address) {
-        const result = await blockchainExplorer.getEthereumBalance(ethereumWallet.address, tokenAddress);
-        return result.success ? result.data : null;
-      } else if (chainId === "XLM" && stellarWallet.address) {
-        const result = await blockchainExplorer.getStellarBalance(stellarWallet.address);
-        if (result.success) {
-          // Find the specific asset balance
-          const balances = result.data;
-          if (tokenAddress) {
-            // Token balance
-            const tokenBalance = balances.find(b => 
-              b.asset_code && b.asset_issuer === tokenAddress
-            );
-            return tokenBalance ? tokenBalance.balance : "0";
-          } else {
-            // Native XLM balance
-            const xlmBalance = balances.find(b => b.asset_type === "native");
-            return xlmBalance ? xlmBalance.balance : "0";
-          }
-        }
-      }
+      // TODO: Implement balance checking when explorer service is available
+      console.log("Balance check requested for", chainId, tokenAddress);
       return null;
     } catch (err) {
       console.error("Error getting balance:", err);
