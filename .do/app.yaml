@@ -18,21 +18,42 @@ region: sfo
 services:
 - dockerfile_path: /Dockerfile
   envs:
+  # Core Switchly Network Configuration
+  - key: VITE_SWITCHLY_HOST
+    scope: RUN_AND_BUILD_TIME
+    value: 64.23.228.195
+  - key: VITE_SWITCHLY_API_PORT
+    scope: RUN_AND_BUILD_TIME
+    value: "1317"
+  - key: VITE_SWITCHLY_MIDGARD_PORT
+    scope: RUN_AND_BUILD_TIME
+    value: "8080"
+  
+  # Ethereum Configuration
   - key: VITE_ETHEREUM_RPC_URL
     scope: RUN_AND_BUILD_TIME
     value: http://64.23.228.195:8545
-  - key: VITE_SWITCHLY_API_BASE_URL
+  - key: VITE_ETHEREUM_CHAIN_ID
     scope: RUN_AND_BUILD_TIME
-    value: http://64.23.228.195:1317
-  - key: VITE_SWITCHLY_MIDGARD_BASE_URL
-    scope: RUN_AND_BUILD_TIME
-    value: http://64.23.228.195:8080
+    value: "0x539"
+  
+  # Stellar Configuration
   - key: VITE_STELLAR_HORIZON_URL
     scope: RUN_AND_BUILD_TIME
     value: https://horizon-testnet.stellar.org
   - key: VITE_STELLAR_SOROBAN_URL
     scope: RUN_AND_BUILD_TIME
     value: https://soroban-testnet.stellar.org
+  
+  # API Base URLs (legacy support - will use proxy paths in production)
+  - key: VITE_SWITCHLY_API_BASE_URL
+    scope: RUN_AND_BUILD_TIME
+    value: /api/switchly
+  - key: VITE_SWITCHLY_MIDGARD_BASE_URL
+    scope: RUN_AND_BUILD_TIME
+    value: /api/midgard
+  
+  # WebSocket Configuration
   - key: VITE_SWITCHLY_SERVICE_WS
     scope: RUN_AND_BUILD_TIME
     value: ws://64.23.228.195:8080

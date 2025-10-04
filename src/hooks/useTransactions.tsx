@@ -6,7 +6,8 @@ import useInboundAddresses from "./useInboundAddresses";
 // Force proxy usage in production to avoid mixed content and CORS issues
 const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:';
 const apiUrl = isProduction ? '/api/midgard' : (import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard');
-const websocketUrl = import.meta.env.VITE_SWITCHLY_SERVICE_WS || 'ws://64.23.228.195:8080';
+const websocketUrl = import.meta.env.VITE_SWITCHLY_SERVICE_WS || 
+  `ws://${import.meta.env.VITE_SWITCHLY_HOST || '64.23.228.195'}:${import.meta.env.VITE_SWITCHLY_MIDGARD_PORT || '8080'}`;
 
 function useTransactions() {
   const [transactions, setTransactions] = useState<Tx[]>([]);

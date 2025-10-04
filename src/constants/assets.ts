@@ -14,8 +14,8 @@ export const ETHEREUM_WSS_URL = import.meta.env.VITE_ETHEREUM_WSS_URL;
 export const STELLAR_HORIZON_URL = import.meta.env.VITE_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org';
 export const STELLAR_SOROBAN_URL = import.meta.env.VITE_STELLAR_SOROBAN_URL || 'https://soroban-testnet.stellar.org';
 
-// Network Configuration
-export const ETHEREUM_CHAIN_ID = '0xaa36a7'; // Sepolia testnet
+// Network Configuration - Dynamic based on environment
+export const ETHEREUM_CHAIN_ID = import.meta.env.VITE_ETHEREUM_CHAIN_ID || '0x539'; // Fallback to 1337 if not specified
 export const STELLAR_NETWORK_PASSPHRASE = 'Test SDF Network ; September 2015';
 
 // Router Contract Addresses (dynamically fetched from API)

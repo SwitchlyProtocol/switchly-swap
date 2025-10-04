@@ -31,8 +31,11 @@ export function useWallet(): UseWalletReturn {
 
   const checkExistingConnections = useCallback(async () => {
     try {
+      // Check if user has explicitly disconnected Ethereum wallet
+      const ethereumDisconnected = localStorage.getItem('ethereum_wallet_disconnected') === 'true';
+      
       // Check Ethereum connection
-      if (window.ethereum) {
+      if (window.ethereum && !ethereumDisconnected) {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.listAccounts();
         
@@ -40,7 +43,7 @@ export function useWallet(): UseWalletReturn {
           const signer = await provider.getSigner();
           const address = await signer.getAddress();
           const network = await provider.getNetwork();
-          
+
           setEthereumWallet({
             isConnected: true,
             address,
@@ -51,8 +54,11 @@ export function useWallet(): UseWalletReturn {
         }
       }
 
+      // Check if user has explicitly disconnected Stellar wallet
+      const stellarDisconnected = localStorage.getItem('stellar_wallet_disconnected') === 'true';
+      
       // Check Stellar connection
-      if (await freighterApi.isConnected()) {
+      if (await freighterApi.isConnected() && !stellarDisconnected) {
         const publicKey = await freighterApi.getPublicKey();
         setStellarWallet({
           isConnected: true,
@@ -97,29 +103,36 @@ export function useWallet(): UseWalletReturn {
       const address = await signer.getAddress();
       const network = await provider.getNetwork();
 
-      // Check if we're on the correct network
+      // Log the current network for debugging
+      console.log('🔗 Connected to Ethereum network:', {
+        chainId: network.chainId.toString(),
+        name: network.name,
+        rpcUrl: import.meta.env.VITE_ETHEREUM_RPC_URL
+      });
+      
+      // Check if we're on the correct private network
       if (network.chainId.toString() !== parseInt(ETHEREUM_CHAIN_ID, 16).toString()) {
         try {
-          // Try to switch to Sepolia
+          // Try to switch to your private network
           await window.ethereum.request({
             method: 'wallet_switchEthereumChain',
             params: [{ chainId: ETHEREUM_CHAIN_ID }],
           });
         } catch (switchError: any) {
           if (switchError.code === 4902) {
-            // Network not added, add it
+            // Network not added, add the configured network
             await window.ethereum.request({
               method: 'wallet_addEthereumChain',
               params: [{
                 chainId: ETHEREUM_CHAIN_ID,
-                chainName: 'Sepolia Testnet',
+                chainName: 'Switchly Private Network',
                 nativeCurrency: {
                   name: 'ETH',
                   symbol: 'ETH',
                   decimals: 18,
                 },
-                rpcUrls: ['https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'],
-                blockExplorerUrls: ['https://sepolia.etherscan.io/'],
+                  rpcUrls: [import.meta.env.VITE_ETHEREUM_RPC_URL || `http://${import.meta.env.VITE_SWITCHLY_HOST || '64.23.228.195'}:8545`],
+                  blockExplorerUrls: [`http://${import.meta.env.VITE_SWITCHLY_HOST || '64.23.228.195'}:8545`],
               }],
             });
           } else {
@@ -130,6 +143,9 @@ export function useWallet(): UseWalletReturn {
 
       // Get balance
       const balance = await provider.getBalance(address);
+
+      // Clear disconnect flag when user explicitly connects
+      localStorage.removeItem('ethereum_wallet_disconnected');
 
       setEthereumWallet({
         isConnected: true,
@@ -158,6 +174,9 @@ export function useWallet(): UseWalletReturn {
 
       const publicKey = await freighterApi.getPublicKey();
 
+      // Clear disconnect flag when user explicitly connects
+      localStorage.removeItem('stellar_wallet_disconnected');
+
       setStellarWallet({
         isConnected: true,
         address: publicKey,
@@ -175,24 +194,30 @@ export function useWallet(): UseWalletReturn {
   const disconnectEthereum = useCallback(() => {
     console.log('Disconnecting Ethereum wallet...');
     
+    // Set disconnect flag in localStorage to prevent auto-reconnect on page refresh
+    localStorage.setItem('ethereum_wallet_disconnected', 'true');
+    
     // Clear the wallet state
     setEthereumWallet({ isConnected: false });
     
     // Note: MetaMask doesn't have a programmatic disconnect method
     // The user would need to disconnect manually in MetaMask extension
-    // But we clear our app's connection state
+    // But we clear our app's connection state and prevent auto-reconnect
     console.log('Ethereum wallet disconnected from app');
   }, []);
 
   const disconnectStellar = useCallback(() => {
     console.log('Disconnecting Stellar wallet...');
     
+    // Set disconnect flag in localStorage to prevent auto-reconnect on page refresh
+    localStorage.setItem('stellar_wallet_disconnected', 'true');
+    
     // Clear the wallet state
     setStellarWallet({ isConnected: false });
     
     // Note: Freighter doesn't have a programmatic disconnect method either
     // The user would need to disconnect manually in Freighter extension
-    // But we clear our app's connection state
+    // But we clear our app's connection state and prevent auto-reconnect
     console.log('Stellar wallet disconnected from app');
   }, []);
 

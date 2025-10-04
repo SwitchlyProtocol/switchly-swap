@@ -5,6 +5,7 @@ import PremiumInput from "./components/PremiumInput";
 import SwapButton from "./components/SwapButton";
 import AssetIcon from "./components/AssetIcon";
 import { usePools } from "./hooks/usePools";
+import { useWallet } from "./hooks/useWallet";
 import { getCurrentStellarAddress, SUPPORTED_ASSETS } from "./constants/assets";
 import { ethers } from 'ethers';
 import * as StellarSdk from '@stellar/stellar-sdk';
@@ -18,14 +19,15 @@ declare global {
 }
 
 function App() {
-  // Debug: Log environment variables on app load
+  // Environment check (development only)
   useEffect(() => {
-    console.log('🔧 Environment Variables Check:');
-    console.log('VITE_ETHEREUM_RPC_URL:', import.meta.env.VITE_ETHEREUM_RPC_URL);
-    console.log('VITE_SWITCHLY_API_BASE_URL:', import.meta.env.VITE_SWITCHLY_API_BASE_URL);
-    console.log('VITE_SWITCHLY_MIDGARD_BASE_URL:', import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL);
-    console.log('VITE_STELLAR_HORIZON_URL:', import.meta.env.VITE_STELLAR_HORIZON_URL);
-    console.log('VITE_STELLAR_SOROBAN_URL:', import.meta.env.VITE_STELLAR_SOROBAN_URL);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 Environment Variables:', {
+        ethereum: import.meta.env.VITE_ETHEREUM_RPC_URL,
+        switchly: import.meta.env.VITE_SWITCHLY_API_BASE_URL,
+        stellar: import.meta.env.VITE_STELLAR_HORIZON_URL
+      });
+    }
   }, []);
 
   // Basic state
@@ -72,12 +74,8 @@ function App() {
     monitoringCleanup?: () => void;
   } | null>(null);
 
-  // Wallet state
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [connectedWalletAddress, setConnectedWalletAddress] = useState<string>("");
-  const [walletType, setWalletType] = useState<'metamask' | 'freighter' | null>(null);
+  // Wallet UI state
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
 
   // Cleanup monitoring on unmount
   useEffect(() => {
@@ -91,7 +89,23 @@ function App() {
   // Add pool data with default refresh rate initially
   const { calculateSwapOutput, pools, isLoading: poolsLoading, error: poolsError } = usePools();
 
+  // Add wallet functionality
+  const { 
+    ethereumWallet, 
+    stellarWallet, 
+    disconnectEthereum, 
+    disconnectStellar,
+    connectEthereum,
+    connectStellar,
+    isConnecting 
+  } = useWallet();
+
   if (poolsError) console.error("Pool error:", poolsError);
+
+  // Derive wallet connection status from wallet hook (single source of truth)
+  const isWalletConnected = ethereumWallet.isConnected || stellarWallet.isConnected;
+  const connectedWalletAddress = ethereumWallet.address || stellarWallet.address || "";
+  const walletType = ethereumWallet.isConnected ? 'metamask' : stellarWallet.isConnected ? 'freighter' : null;
 
   // Map UI asset names to pool asset names (moved up first)
   const getPoolAssetName = (uiAssetName: string): string => {
@@ -120,7 +134,6 @@ function App() {
     if (token.includes("Stellar") && walletType !== 'freighter') return true;
     return false;
   };
-
   
   const buttonDisabled = isSwapping ||
     !isWalletConnected ||
@@ -131,29 +144,14 @@ function App() {
     poolsLoading ||
     needsWalletForToken(fromToken);
     
-  console.log("🔒 Send button should be disabled:", buttonDisabled);
+  // Debug logging in development only
+  if (process.env.NODE_ENV === 'development') {
+    console.log("🔒 Send button disabled:", buttonDisabled);
+  }
 
   // Check for existing wallet connections on app load (only MetaMask - passive check)
   useEffect(() => {
-    const checkExistingConnections = async () => {
-      try {
-        // Only check MetaMask connection (passive check - doesn't trigger popup)
-        const ethereum = (window as any).ethereum;
-        if (ethereum && ethereum.selectedAddress) {
-          setIsWalletConnected(true);
-          setConnectedWalletAddress(ethereum.selectedAddress);
-          setWalletType('metamask');
-          console.log('🔄 Restored MetaMask connection:', ethereum.selectedAddress);
-        }
-        
-        // Note: Freighter connection is NOT checked automatically to avoid popup
-        // Users must explicitly connect via the Connect Wallet button
-      } catch (error) {
-        console.log('No existing wallet connections found:', error);
-      }
-    };
-
-    checkExistingConnections();
+  // Connection checking is now handled by the useWallet hook
   }, []);
 
   // Update timestamp when pools change
@@ -221,61 +219,22 @@ function App() {
   // Wallet connection functions
   const connectMetaMask = async () => {
     try {
-      setIsConnecting(true);
-      const ethereum = (window as any).ethereum;
-      
-      if (!ethereum) {
-        alert('Please install MetaMask!');
-        return;
-      }
-      
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts.length > 0) {
-        setIsWalletConnected(true);
-        setConnectedWalletAddress(accounts[0]);
-        setWalletType('metamask');
-        setShowWalletModal(false);
-        console.log('✅ MetaMask connected:', accounts[0]);
-      }
+      await connectEthereum();
+      setShowWalletModal(false);
+      console.log('✅ MetaMask connected via useWallet hook');
     } catch (error) {
-      console.error('❌ Error connecting to MetaMask:', error);
+      console.error('❌ Failed to connect to MetaMask:', error);
       alert('Failed to connect to MetaMask');
-    } finally {
-      setIsConnecting(false);
     }
   };
 
   const connectFreighter = async () => {
     try {
-      setIsConnecting(true);
-      
-      // Import Freighter API functions with requestAccess
-      const { getPublicKey, isConnected } = await import('@stellar/freighter-api');
-      
-      // Check if Freighter is installed and connected
-      let connected = await isConnected();
-      console.log('🔌 Initial Freighter connection status:', connected);
-      
-      if (!connected) {
-        console.log('🚪 Freighter not connected, will try to get public key...');
-      }
-      
-      // Get the public key
-      console.log('🔑 Getting public key...');
-      const publicKey = await getPublicKey();
-      console.log('🔑 Freighter public key:', publicKey);
-      
-      if (publicKey) {
-        setIsWalletConnected(true);
-        setConnectedWalletAddress(publicKey);
-        setWalletType('freighter');
-        setShowWalletModal(false);
-        console.log('✅ Freighter wallet connected successfully:', publicKey);
-      } else {
-        throw new Error('No public key received from Freighter');
-      }
+      await connectStellar();
+      setShowWalletModal(false);
+      console.log('✅ Freighter connected via useWallet hook');
     } catch (error) {
-      console.error('❌ Error connecting to Freighter:', error);
+      console.error('❌ Failed to connect to Freighter:', error);
       
       const errorMessage = error instanceof Error ? error.message : String(error);
       
@@ -287,8 +246,6 @@ function App() {
       } else {
         alert(`Failed to connect to Freighter: ${errorMessage}`);
       }
-    } finally {
-      setIsConnecting(false);
     }
   };
 
@@ -300,10 +257,6 @@ function App() {
       disconnectStellar();
     }
     
-    // Clear app state
-    setIsWalletConnected(false);
-    setConnectedWalletAddress("");
-    setWalletType(null);
     console.log('Wallet disconnected:', walletType);
   };
 
@@ -328,43 +281,30 @@ function App() {
           setCrossChainTx(prev => {
             if (!prev) return null;
 
-            // Determine overall status with better logic
+            // Determine overall status
             let overallStatus: typeof prev.status = 'sent';
             
-            console.log('🔄 Cross-chain status update:', {
-              sourceStatus: update.source.status,
-              switchlyStatus: update.switchly?.status,
-              targetStatus: update.target?.status,
-              currentStatus: prev.status
-            });
+            // Log status updates in development only
+            if (process.env.NODE_ENV === 'development') {
+              console.log('🔄 Cross-chain status update:', {
+                source: update.source.status,
+                switchly: update.switchly?.status,
+                target: update.target?.status
+              });
+            }
             
             if (update.source.status === 'failed') {
               overallStatus = 'failed';
             } else if (update.source.status === 'confirmed') {
-              // Source is confirmed, now check Switchly
               if (update.switchly) {
-                console.log('🔄 Switchly action details:', {
-                  type: update.switchly.type,
-                  status: update.switchly.status,
-                  hasOut: update.switchly.out?.length > 0
-                });
-                
                 if (update.switchly.status === 'success') {
-                  // Switchly processed successfully
-                  if (update.target?.status === 'confirmed') {
-                    overallStatus = 'completed';
-                  } else {
-                    overallStatus = 'awaiting';
-                  }
+                  overallStatus = update.target?.status === 'confirmed' ? 'completed' : 'awaiting';
                 } else if (update.switchly.status === 'failed' || update.switchly.type === 'refund') {
-                  // Switchly failed, but source transaction succeeded
                   overallStatus = 'failed';
                 } else {
-                  // Switchly is still pending
                   overallStatus = 'processing';
                 }
               } else {
-                // Source confirmed but Switchly hasn't seen it yet
                 overallStatus = 'processing';
               }
             } else if (update.source.status === 'pending') {
@@ -448,7 +388,7 @@ function App() {
               }
             }
 
-            return {
+            const updatedTx = {
               ...prev,
               status: overallStatus,
               sourceTx: updatedSourceTx,
@@ -456,6 +396,20 @@ function App() {
               targetTx: updatedTargetTx,
               monitoringCleanup: cleanup
             };
+
+            // Stop monitoring if transaction is completed or failed
+            if (overallStatus === 'completed' || overallStatus === 'failed') {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('🛑 Transaction finished:', overallStatus);
+              }
+              if (cleanup) {
+                cleanup();
+              }
+              // Remove cleanup function since monitoring is stopped
+              updatedTx.monitoringCleanup = undefined as any;
+            }
+
+            return updatedTx;
           });
         }
       );
@@ -475,6 +429,12 @@ function App() {
     
     if (!isWalletConnected || !amount || !toAddress || !arePoolsAvailable(fromToken, toToken)) {
       return;
+    }
+
+    // Clear any existing completed transaction state when starting a new swap
+    if (crossChainTx && (crossChainTx.status === 'completed' || crossChainTx.status === 'failed')) {
+      console.log('🔄 Clearing previous transaction state for new swap');
+      setCrossChainTx(null);
     }
 
     setIsSwapping(true);
