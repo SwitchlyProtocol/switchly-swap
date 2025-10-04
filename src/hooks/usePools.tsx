@@ -174,10 +174,6 @@ export function usePools(): UsePoolsReturn {
       // Calculate effective exchange rate (after fees)
       const effectiveRate = outputAfterFees / testInputAmount;
       
-      // Debug logging in development only
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`📊 Exchange rate ${fromAsset} → ${toAsset}: ${effectiveRate.toFixed(6)}`);
-      }
       
       return effectiveRate.toFixed(8);
     } catch (err) {
@@ -244,10 +240,12 @@ export function usePools(): UsePoolsReturn {
         // If API returns in 6-decimal format: multiply by 100 to get 8-decimal
         // Based on your docs: 1000000 (6-decimal) → 100000000 (8-decimal)
         fromAssetBalance = parseFloat(fromPool.balance_asset) * 100; // Convert 6-decimal to 8-decimal
-      } else if (fromAsset === "XLM.XLM" || fromAsset === "XLM.USDC") {
-        // XLM assets (XLM, USDC) pool balance should be in 8-decimal format per SWITCHLYChain spec
-        // But API returns them in 7-decimal format, so convert: 7-decimal * 10 = 8-decimal
+      } else if (fromAsset === "XLM.XLM") {
+        // XLM pool balance: API returns in 7-decimal format, convert to 8-decimal
         fromAssetBalance = parseFloat(fromPool.balance_asset) * 10; // Convert 7-decimal to 8-decimal
+      } else if (fromAsset === "XLM.USDC") {
+        // XLM.USDC: Already in 8-decimal format in the API
+        fromAssetBalance = parseFloat(fromPool.balance_asset); // Use as-is
       } else {
         fromAssetBalance = parseFloat(fromPool.balance_asset);
       }
@@ -260,10 +258,12 @@ export function usePools(): UsePoolsReturn {
         // If API returns in 6-decimal format: multiply by 100 to get 8-decimal
         // Based on your docs: 1000000 (6-decimal) → 100000000 (8-decimal)
         toAssetBalance = parseFloat(toPool.balance_asset) * 100; // Convert 6-decimal to 8-decimal
-      } else if (toAsset === "XLM.XLM" || toAsset === "XLM.USDC") {
-        // XLM assets (XLM, USDC) pool balance should be in 8-decimal format per SWITCHLYChain spec
-        // But API returns them in 7-decimal format, so convert: 7-decimal * 10 = 8-decimal
+      } else if (toAsset === "XLM.XLM") {
+        // XLM pool balance: API returns in 7-decimal format, convert to 8-decimal
         toAssetBalance = parseFloat(toPool.balance_asset) * 10; // Convert 7-decimal to 8-decimal
+      } else if (toAsset === "XLM.USDC") {
+        // XLM.USDC: Already in 8-decimal format in the API
+        toAssetBalance = parseFloat(toPool.balance_asset); // Use as-is
       } else {
         toAssetBalance = parseFloat(toPool.balance_asset);
       }
@@ -389,11 +389,6 @@ export function usePools(): UsePoolsReturn {
 
       // Calculate actual exchange rate based on output after fees
       const actualExchangeRate = outputAfterFees / inputInHumanUnits;
-      
-      // Debug logging in development only
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`💱 Swap calculation: ${inputInHumanUnits} ${fromAsset} → ${outputAfterFees.toFixed(6)} ${toAsset}`);
-      }
 
       return {
         outputAmount: outputAfterFees.toString(),

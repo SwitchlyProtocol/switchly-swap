@@ -49,7 +49,6 @@ function useTransactions() {
 
     // Add event listeners
     socket.onopen = () => {
-      console.log("WebSocket connection established.");
     };
 
     socket.onmessage = handleWebSocketMessage;
@@ -59,7 +58,6 @@ function useTransactions() {
     };
 
     socket.onclose = () => {
-      console.log("WebSocket connection closed. Attempting to reconnect...");
       // You might want to implement reconnection logic here
     };
 
@@ -80,7 +78,6 @@ function useTransactions() {
 
     // Clean up WebSocket connection
     return () => {
-      console.log("Closing WebSocket connection...");
       socket.close();
     };
   }, []);

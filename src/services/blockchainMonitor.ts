@@ -248,11 +248,11 @@ export class BlockchainMonitor {
     try {
       if (targetChain === 'stellar') {
         // Monitor Stellar destination address for transactions with OUT memo
-        console.log('🔍 Monitoring Stellar destination address:', destinationAddress, 'for source tx:', sourceTxHash);
+        Logger.debug('Monitoring Stellar destination address', { destinationAddress, sourceTxHash });
         const response = await fetch(`${this.stellarHorizonUrl}/accounts/${destinationAddress}/transactions?order=desc&limit=10`);
         
         if (!response.ok) {
-          console.log('❌ Failed to fetch Stellar transactions:', response.status, response.statusText);
+          Logger.error('Failed to fetch Stellar transactions', { status: response.status, statusText: response.statusText });
           return undefined;
         }
 
@@ -261,15 +261,14 @@ export class BlockchainMonitor {
           ? sourceTxHash.slice(2).toUpperCase() 
           : sourceTxHash.toUpperCase();
 
-        console.log('🔍 Looking for source tx hash:', cleanSourceTxHash);
-        console.log('🔍 Found', data._embedded?.records?.length || 0, 'transactions');
+        Logger.debug('Looking for source tx hash', { cleanSourceTxHash, transactionCount: data._embedded?.records?.length || 0 });
 
         // Look for transactions with OUT memo matching our source transaction
         for (const tx of data._embedded?.records || []) {
-          console.log('🔍 Checking transaction:', tx.id, 'memo:', tx.memo);
+          Logger.debug('Checking transaction', { txId: tx.id, memo: tx.memo });
           if (tx.memo && tx.memo.includes('OUT:')) {
             const memoHash = tx.memo.slice(tx.memo.indexOf('OUT:') + 4);
-            console.log('🔍 Extracted memo hash:', memoHash);
+            Logger.debug('Extracted memo hash', { memoHash });
             
             // Handle truncated memos (Stellar truncates with ...)
             if (memoHash.includes('...')) {
@@ -277,11 +276,11 @@ export class BlockchainMonitor {
               const parts = memoHash.split('...');
               const beginning = parts[0];
               const ending = parts[1];
-              console.log('🔍 Truncated memo - beginning:', beginning, 'ending:', ending);
+              Logger.debug('Truncated memo parts', { beginning, ending });
               
               // Check if source hash starts with beginning and ends with ending
               if (cleanSourceTxHash.startsWith(beginning) && cleanSourceTxHash.endsWith(ending)) {
-                console.log('✅ Found matching Stellar destination transaction (truncated):', tx.id);
+                Logger.info('Found matching Stellar destination transaction (truncated)', { txId: tx.id });
                 return {
                   hash: tx.id,
                   status: tx.successful ? 'confirmed' : 'failed',
@@ -290,7 +289,7 @@ export class BlockchainMonitor {
                 };
               }
             } else if (memoHash.toUpperCase() === cleanSourceTxHash) {
-              console.log('✅ Found matching Stellar destination transaction (exact):', tx.id);
+              Logger.info('Found matching Stellar destination transaction (exact)', { txId: tx.id });
               return {
                 hash: tx.id,
                 status: tx.successful ? 'confirmed' : 'failed',
@@ -301,10 +300,10 @@ export class BlockchainMonitor {
           }
         }
         
-        console.log('❌ No matching destination transaction found');
+        Logger.debug('No matching destination transaction found');
       } else if (targetChain === 'ethereum') {
         // Monitor Ethereum router contract for TransferOut events
-        console.log('🔍 Monitoring Ethereum router for TransferOut events to:', destinationAddress);
+        Logger.debug('Monitoring Ethereum router for TransferOut events', { destinationAddress });
         return await this.monitorEthereumRouterEvents(destinationAddress, sourceTxHash);
       }
 
@@ -326,8 +325,7 @@ export class BlockchainMonitor {
         ? sourceTxHash.slice(2).toUpperCase() 
         : sourceTxHash.toUpperCase();
 
-      console.log('🔍 Checking Ethereum router events for destination:', destinationAddress);
-      console.log('🔍 Looking for source tx hash in memo:', cleanSourceTxHash);
+      Logger.debug('Checking Ethereum router events', { destinationAddress, cleanSourceTxHash });
 
       // Get recent blocks to search for TransferOut events
       const currentBlock = await this.ethereumProvider.getBlockNumber();
@@ -344,7 +342,7 @@ export class BlockchainMonitor {
         toBlock: 'latest'
       });
 
-      console.log(`🔍 Found ${logs.length} TransferOut events in blocks ${fromBlock}-${currentBlock}`);
+      Logger.debug('Found TransferOut events', { eventCount: logs.length, fromBlock, toBlock: currentBlock });
 
       // Try multiple event signatures for decoding
       const possibleSignatures = [
@@ -354,7 +352,7 @@ export class BlockchainMonitor {
       ];
 
       for (const log of logs) {
-        console.log('🔍 Checking TransferOut event:', log.transactionHash);
+        Logger.debug('Checking TransferOut event', { txHash: log.transactionHash });
         
         let decoded: ethers.LogDescription | null = null;
         for (const signature of possibleSignatures) {
@@ -371,23 +369,19 @@ export class BlockchainMonitor {
           const toAddress = decoded.args[1] || decoded.args.to;
           const memo = decoded.args[4] || decoded.args.memo;
           
-          console.log('🔍 TransferOut event details:', {
-            to: toAddress,
-            memo: memo,
-            txHash: log.transactionHash
-          });
+          Logger.debug('TransferOut event details', { to: toAddress, memo, txHash: log.transactionHash });
 
           // Check if this event is to our destination address
           if (toAddress && toAddress.toLowerCase() === destinationAddress.toLowerCase()) {
-            console.log('✅ Found TransferOut to our destination address!');
+            Logger.info('Found TransferOut to destination address');
             
             // Check if memo contains our source transaction hash
             if (memo && typeof memo === 'string' && memo.includes('OUT:')) {
               const memoHash = memo.slice(memo.indexOf('OUT:') + 4).toUpperCase();
-              console.log('🔍 Memo hash from TransferOut:', memoHash);
+              Logger.debug('Memo hash from TransferOut', { memoHash });
               
               if (memoHash === cleanSourceTxHash || cleanSourceTxHash.includes(memoHash)) {
-                console.log('✅ Found matching Ethereum destination transaction:', log.transactionHash);
+                Logger.info('Found matching Ethereum destination transaction', { txHash: log.transactionHash });
                 
                 // Get transaction receipt for confirmation status
                 const receipt = await this.ethereumProvider.getTransactionReceipt(log.transactionHash);
@@ -404,7 +398,7 @@ export class BlockchainMonitor {
         }
       }
 
-      console.log('❌ No matching Ethereum TransferOut event found');
+      Logger.debug('No matching Ethereum TransferOut event found');
       return undefined;
 
     } catch (error) {
@@ -465,13 +459,13 @@ export class BlockchainMonitor {
         } else if (switchlyAction?.status === 'success') {
           // If we don't have a target hash but Switchly is successful, 
           // try to find the destination transaction by monitoring the destination address
-          console.log('🔍 Switchly successful but no target hash, monitoring destination address...');
+          Logger.debug('Switchly successful but no target hash, monitoring destination address');
           targetStatus = await this.monitorDestinationAddress(destinationAddress, targetChain, sourceTxHash);
           
           // If we found a transaction through destination monitoring, set the targetTxHash
           if (targetStatus && !targetTxHash) {
             targetTxHash = targetStatus.hash;
-            console.log('✅ Set target hash from destination monitoring:', targetTxHash);
+            Logger.info('Set target hash from destination monitoring', { targetTxHash });
           }
         }
 

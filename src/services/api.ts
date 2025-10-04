@@ -22,12 +22,6 @@ class SwitchlyAPI {
     this.midgardUrl = isProduction ? '/api/midgard' : (import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL || '/api/midgard');
     this.isUsingProxy = isProduction || this.baseUrl.startsWith('/api/');
     
-    // Debug: Log API URLs being used
-    console.log('🔧 API Service Configuration:');
-    console.log('Base URL (Switchly API):', this.baseUrl);
-    console.log('Midgard URL:', this.midgardUrl);
-    console.log('Environment VITE_SWITCHLY_API_BASE_URL:', import.meta.env.VITE_SWITCHLY_API_BASE_URL);
-    console.log('Environment VITE_SWITCHLY_MIDGARD_BASE_URL:', import.meta.env.VITE_SWITCHLY_MIDGARD_BASE_URL);
   }
 
   /**
@@ -38,7 +32,6 @@ class SwitchlyAPI {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
-      console.log('🌐 API Request:', url);
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',

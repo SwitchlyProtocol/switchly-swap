@@ -104,11 +104,6 @@ export function useWallet(): UseWalletReturn {
       const network = await provider.getNetwork();
 
       // Log the current network for debugging
-      console.log('🔗 Connected to Ethereum network:', {
-        chainId: network.chainId.toString(),
-        name: network.name,
-        rpcUrl: import.meta.env.VITE_ETHEREUM_RPC_URL
-      });
       
       // Check if we're on the correct private network
       if (network.chainId.toString() !== parseInt(ETHEREUM_CHAIN_ID, 16).toString()) {
@@ -192,7 +187,6 @@ export function useWallet(): UseWalletReturn {
   }, []);
 
   const disconnectEthereum = useCallback(() => {
-    console.log('Disconnecting Ethereum wallet...');
     
     // Set disconnect flag in localStorage to prevent auto-reconnect on page refresh
     localStorage.setItem('ethereum_wallet_disconnected', 'true');
@@ -203,11 +197,9 @@ export function useWallet(): UseWalletReturn {
     // Note: MetaMask doesn't have a programmatic disconnect method
     // The user would need to disconnect manually in MetaMask extension
     // But we clear our app's connection state and prevent auto-reconnect
-    console.log('Ethereum wallet disconnected from app');
   }, []);
 
   const disconnectStellar = useCallback(() => {
-    console.log('Disconnecting Stellar wallet...');
     
     // Set disconnect flag in localStorage to prevent auto-reconnect on page refresh
     localStorage.setItem('stellar_wallet_disconnected', 'true');
@@ -218,13 +210,11 @@ export function useWallet(): UseWalletReturn {
     // Note: Freighter doesn't have a programmatic disconnect method either
     // The user would need to disconnect manually in Freighter extension
     // But we clear our app's connection state and prevent auto-reconnect
-    console.log('Stellar wallet disconnected from app');
   }, []);
 
-  const getBalance = useCallback(async (chainId: ChainId, tokenAddress?: string): Promise<string | null> => {
+  const getBalance = useCallback(async (_chainId: ChainId, _tokenAddress?: string): Promise<string | null> => {
     try {
       // TODO: Implement balance checking when explorer service is available
-      console.log("Balance check requested for", chainId, tokenAddress);
       return null;
     } catch (err) {
       console.error("Error getting balance:", err);

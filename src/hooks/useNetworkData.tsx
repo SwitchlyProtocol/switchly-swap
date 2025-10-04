@@ -51,12 +51,6 @@ export function useNetworkData(): UseNetworkDataReturn {
       const data = await response.json();
       setNetworkData(data);
       
-      console.log('📊 Network data fetched:', {
-        outbound_fee_multiplier: data.outbound_fee_multiplier,
-        native_outbound_fee_switch: data.native_outbound_fee_switch,
-        gas_spent_switch: data.gas_spent_switch,
-        gas_withheld_switch: data.gas_withheld_switch,
-      });
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';

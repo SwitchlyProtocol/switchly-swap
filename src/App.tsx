@@ -19,23 +19,12 @@ declare global {
 }
 
 function App() {
-  // Environment check (development only)
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔧 Environment Variables:', {
-        ethereum: import.meta.env.VITE_ETHEREUM_RPC_URL,
-        switchly: import.meta.env.VITE_SWITCHLY_API_BASE_URL,
-        stellar: import.meta.env.VITE_STELLAR_HORIZON_URL
-      });
-    }
-  }, []);
 
   // Basic state
   const [amount, setAmount] = useState("1.0");
   const [fromToken, setFromToken] = useState("ETH (Ethereum Sepolia)");
   const [toToken, setToToken] = useState("XLM (Stellar Testnet)");
   const [toAddress, setToAddress] = useState("");
-  // Removed unused lastRateUpdate state
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapStatus, setSwapStatus] = useState<string>("");
   // Enhanced cross-chain transaction tracking
@@ -135,7 +124,7 @@ function App() {
     return false;
   };
   
-  const buttonDisabled = isSwapping ||
+  const isButtonDisabled = isSwapping ||
     !isWalletConnected ||
     !amount || 
     parseFloat(amount || "0") <= 0 || 
@@ -144,29 +133,6 @@ function App() {
     poolsLoading ||
     needsWalletForToken(fromToken);
     
-  // Debug logging in development only
-  if (process.env.NODE_ENV === 'development') {
-    console.log("🔒 Send button disabled:", buttonDisabled);
-  }
-
-  // Check for existing wallet connections on app load (only MetaMask - passive check)
-  useEffect(() => {
-  // Connection checking is now handled by the useWallet hook
-  }, []);
-
-  // Update timestamp when pools change
-  useEffect(() => {
-    if (Object.keys(pools).length > 0 && !poolsLoading) {
-        // setLastRateUpdate(new Date()); // Removed unused state
-      console.log("🔄 Exchange rates updated:", new Date().toLocaleTimeString());
-    }
-  }, [pools, poolsLoading]);
-
-  // Removed continuous refresh - rates will only update on manual refresh or initial load
-
-  // Duplicate functions removed - already defined above
-
-  // Function moved up - removing duplicate
 
   // Get missing pool information
   const getMissingPoolInfo = (fromAsset: string, toAsset: string): string | null => {
@@ -195,23 +161,17 @@ function App() {
     const fromPoolAsset = getPoolAssetName(fromToken);
     const toPoolAsset = getPoolAssetName(toToken);
     
-    console.log(`🔄 App: Calculating ${amount} ${fromPoolAsset} → ${toPoolAsset}`);
-    console.log(`🔄 App: Available pools:`, Object.keys(pools));
     
     // Check if pools are available
     if (!arePoolsAvailable(fromToken, toToken)) {
-      const missingInfo = getMissingPoolInfo(fromToken, toToken);
-      console.log(`❌ App: ${missingInfo}`);
       return "⚠️ N/A";
     }
     
     const swapResult = calculateSwapOutput(fromPoolAsset, toPoolAsset, amount);
     
     if (swapResult) {
-      console.log(`✅ App: Result: ${swapResult.outputAmount} (rate: ${swapResult.exchangeRate})`);
       return parseFloat(swapResult.outputAmount).toFixed(4);
     } else {
-      console.log(`❌ App: No swap result for ${fromPoolAsset} → ${toPoolAsset}`);
       return poolsError ? "❌ Error" : "0.0000";
     }
   };
@@ -221,7 +181,6 @@ function App() {
     try {
       await connectEthereum();
       setShowWalletModal(false);
-      console.log('✅ MetaMask connected via useWallet hook');
     } catch (error) {
       console.error('❌ Failed to connect to MetaMask:', error);
       alert('Failed to connect to MetaMask');
@@ -232,7 +191,6 @@ function App() {
     try {
       await connectStellar();
       setShowWalletModal(false);
-      console.log('✅ Freighter connected via useWallet hook');
     } catch (error) {
       console.error('❌ Failed to connect to Freighter:', error);
       
@@ -257,7 +215,6 @@ function App() {
       disconnectStellar();
     }
     
-    console.log('Wallet disconnected:', walletType);
   };
 
   const openWalletModal = () => {
@@ -285,13 +242,6 @@ function App() {
             let overallStatus: typeof prev.status = 'sent';
             
             // Log status updates in development only
-            if (process.env.NODE_ENV === 'development') {
-              console.log('🔄 Cross-chain status update:', {
-                source: update.source.status,
-                switchly: update.switchly?.status,
-                target: update.target?.status
-              });
-            }
             
             if (update.source.status === 'failed') {
               overallStatus = 'failed';
@@ -347,7 +297,6 @@ function App() {
                 status: 'pending' // Initially pending until destination monitoring confirms
               };
               
-              console.log('🎯 Target transaction detected from outbound queue:', targetTxHash);
             }
             
             // Update target tx details if destination monitoring provides more info
@@ -368,7 +317,6 @@ function App() {
                   : `https://sepolia.etherscan.io/tx/${update.target.hash}`;
                 updatedTargetTx.explorerUrl = actualTargetExplorerUrl;
                 
-                console.log('🎯 Target transaction confirmed by destination monitoring:', update.target.hash);
               } else {
                 // Create target tx from destination monitoring if not set from outbound queue
                 const targetExplorerUrl = sourceChain === 'ethereum' 
@@ -384,7 +332,6 @@ function App() {
                   status: update.target.status
                 };
                 
-                console.log('🎯 Target transaction detected by destination monitoring:', update.target.hash);
               }
             }
 
@@ -399,9 +346,6 @@ function App() {
 
             // Stop monitoring if transaction is completed or failed
             if (overallStatus === 'completed' || overallStatus === 'failed') {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('🛑 Transaction finished:', overallStatus);
-              }
               if (cleanup) {
                 cleanup();
               }
@@ -433,7 +377,6 @@ function App() {
 
     // Clear any existing completed transaction state when starting a new swap
     if (crossChainTx && (crossChainTx.status === 'completed' || crossChainTx.status === 'failed')) {
-      console.log('🔄 Clearing previous transaction state for new swap');
       setCrossChainTx(null);
     }
 
@@ -522,7 +465,6 @@ function App() {
       // Initialize cross-chain tracking
       setTimeout(() => {
         setSwapStatus("");
-        console.log('🚀 Starting cross-chain tracking for ETH->XLM:', txHash);
         setCrossChainTx({
           sourceChain: 'ethereum',
           targetChain: 'stellar',
@@ -650,7 +592,6 @@ function App() {
       
       setTimeout(() => {
         setSwapStatus("");
-        console.log('🚀 Starting cross-chain tracking for XLM->ETH:', response.hash);
         setCrossChainTx({
           sourceChain: 'stellar',
           targetChain: 'ethereum',
@@ -687,9 +628,7 @@ function App() {
     }
   };
 
-  // Duplicate function removed - already defined above
 
-  // Removed unused handleRefreshRates function
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -835,18 +774,9 @@ function App() {
                 {/* Submit button */}
                 <button
                   type="submit"
-                  disabled={
-                    isSwapping ||
-                    !isWalletConnected ||
-                    !amount || 
-                    parseFloat(amount || "0") <= 0 || 
-                    !toAddress || 
-                    !arePoolsAvailable(fromToken, toToken) ||
-                    poolsLoading ||
-                    needsWalletForToken(fromToken)
-                  }
+                  disabled={isButtonDisabled}
                   className={`relative w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-300 ${
-                    isSwapping || !isWalletConnected || !amount || parseFloat(amount || "0") <= 0 || !toAddress || !arePoolsAvailable(fromToken, toToken) || poolsLoading || needsWalletForToken(fromToken)
+                    isButtonDisabled
                       ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                       : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]'
                   }`}
